@@ -22,6 +22,14 @@ class StockMove(models.Model):
 
 	categ_id = fields.Many2one(comodel_name="product.category", string="Catégorie")
 
+	@api.model
+	def create(self, vals):
+		if vals.get('product_id') and not vals.get('categ_id'):
+			product_id = self.env['product.product'].sudo().browse(vals.get('product_id'))
+			vals['categ_id'] = product_id.categ_id.id
+		res = super(StockMove, self).create(vals)
+		return res
+
 class MrpProduction(models.Model):
 
 	_inherit = "mrp.production"

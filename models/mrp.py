@@ -34,6 +34,18 @@ class MrpProduction(models.Model):
 
 	_inherit = "mrp.production"
 
+	normal_product_ids = fields.Many2many(string="Normal Product", comodel_name="product.product", compute="_compute_normal_product", default=lambda self: self.product_domain())
+
+	def _compute_normal_product(self):
+		for rec in self:
+			rec.normal_product_ids = [(6, 0, self.product_domain())]
+
+	def product_domain(self):
+		bom_ids = self.env['mrp.bom'].sudo().search([('type', '=', 'normal')])
+		product_product_ids = self.env['product.product'].sudo().search([('product_tmpl_id', 'in', bom_ids.mapped('product_tmpl_id').ids)])
+		# product_ids = self.env['product.product'].sudo().search([('type', 'in', ['product', 'consu']), ('id', 'in', product_product_ids.ids)])
+		return product_product_ids.ids
+
 	def _get_move_raw_values(self, product_id, product_uom_qty, product_uom, operation_id=False, bom_line=False):
 		data = super(MrpProduction, self)._get_move_raw_values(product_id, product_uom_qty, product_uom, operation_id, bom_line)
 

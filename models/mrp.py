@@ -4,15 +4,6 @@ from odoo import models, fields, api
 
 
 
-class MrpProduction(models.Model):
-	_inherit = "mrp.production"
-
-	product_taken_ids = fields.Many2many('product.product', string="Produit déjà pris", compute="_set_product_taken_ids")
-
-	@api.depends('move_raw_ids.product_id')
-	def _set_product_taken_ids(self):
-		for rec in self:
-			rec.product_taken_ids = rec.move_raw_ids.mapped('product_id.id')
 
 class MrpBomLine(models.Model):
 	_inherit = "mrp.bom.line"
@@ -48,6 +39,7 @@ class MrpProduction(models.Model):
 	_inherit = "mrp.production"
 
 	normal_product_ids = fields.Many2many(string="Normal Product", comodel_name="product.product", compute="_compute_normal_product", default=lambda self: self.product_domain())
+	product_taken_ids = fields.Many2many('product.product', string="Produit déjà pris", compute="_set_product_taken_ids")
 
 	def _compute_normal_product(self):
 		for rec in self:
@@ -65,3 +57,20 @@ class MrpProduction(models.Model):
 		data['categ_id'] = bom_line.categ_id.id
 
 		return data
+
+	@api.depends('move_raw_ids.product_id')
+	def _set_product_taken_ids(self):
+		for rec in self:
+			rec.product_taken_ids = rec.move_raw_ids.mapped('product_id.id')
+
+
+class StockMoveLine(models.Model):
+	_inherit = "stock.move.line"
+
+	operation_id = fields.Many2one(related="move_id.operation_id", string="Consommé dans l'opération",store=True)
+
+
+
+
+
+	

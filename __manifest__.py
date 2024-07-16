@@ -26,5 +26,7 @@
     # always loaded
     'data': [
         'views/views.xml',
+        'views/stock_move_view.xml',
+        'views/mrp_menu.xml'
     ],
 }

@@ -3,10 +3,22 @@
 from odoo import models, fields, api
 
 
+
+class MrpProduction(models.Model):
+	_inherit = "mrp.production"
+
+	product_taken_ids = fields.Many2many('product.product', string="Produit déjà pris", compute="_set_product_taken_ids")
+
+	@api.depends('move_raw_ids.product_id')
+	def _set_product_taken_ids(self):
+		for rec in self:
+			rec.product_taken_ids = rec.move_raw_ids.mapped('product_id.id')
+
 class MrpBomLine(models.Model):
 	_inherit = "mrp.bom.line"
 
 	categ_id = fields.Many2one(comodel_name="product.category", string="Catégorie")
+	
 
 	@api.onchange('categ_id')
 	def _onchange_field_categ_id(self):
@@ -21,6 +33,7 @@ class StockMove(models.Model):
 	_inherit = "stock.move"
 
 	categ_id = fields.Many2one(comodel_name="product.category", string="Catégorie")
+	product_taken_ids = fields.Many2many(related="raw_material_production_id.product_taken_ids", string="Produit déjà pris")
 
 	@api.model
 	def create(self, vals):

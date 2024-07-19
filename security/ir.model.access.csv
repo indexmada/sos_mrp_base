@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mr_routing_bom,mrp_routing_bom,model_mrp_routing_bom,base.group_user,1,1,1,1

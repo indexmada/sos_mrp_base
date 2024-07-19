@@ -25,8 +25,10 @@
 
     # always loaded
     'data': [
+        'security/ir.model.access.csv',
         'views/views.xml',
         'views/stock_move_view.xml',
-        'views/mrp_menu.xml'
+        'views/mrp_menu.xml',
+        'views/mrp_routing_workcenter.xml'
     ],
 }

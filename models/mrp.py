@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from odoo import models, fields, api
+from odoo import models, fields, api,_
+from odoo.exceptions import UserError, ValidationError
+import logging
 
+
+_logger = logging.getLogger(__name__)
 
 
 
@@ -33,6 +37,8 @@ class StockMove(models.Model):
 			vals['categ_id'] = product_id.categ_id.id
 		res = super(StockMove, self).create(vals)
 		return res
+	
+
 
 class MrpProduction(models.Model):
 
@@ -57,18 +63,36 @@ class MrpProduction(models.Model):
 		data['categ_id'] = bom_line.categ_id.id
 
 		return data
+	
+	def action_open_confirm(self):
+		return {
+			'type': 'ir.actions.client',
+			'tag': 'display_notification',
+			'name': _('Alert : Produit existant'),
+		}
+	
+	def button_mark_done(self):
+		res = super(MrpProduction, self).button_mark_done()
+		for rec in self:
+			picking = rec.picking_ids.filtered(lambda d: d.state != 'done')
+			if picking:
+				raise ValidationError("""Vous ne pouvez pas marquer cette fabrication comme terminée tant que le transfert associé n'est pas effectué ou terminé. 
+						  \nVeuillez d'abord terminer ou marquer comme fait le transfert""")
+		return res
 
+	
 	@api.depends('move_raw_ids.product_id')
 	def _set_product_taken_ids(self):
 		for rec in self:
 			rec.product_taken_ids = rec.move_raw_ids.mapped('product_id.id')
+			
+
 
 
 class StockMoveLine(models.Model):
 	_inherit = "stock.move.line"
 
 	operation_id = fields.Many2one(related="move_id.operation_id", string="Consommé dans l'opération",store=True)
-
 
 
 

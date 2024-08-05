@@ -29,6 +29,7 @@
         'views/views.xml',
         'views/stock_move_view.xml',
         'views/mrp_menu.xml',
-        'views/mrp_routing_workcenter.xml'
+        'views/mrp_routing_workcenter.xml',
+        "wizard/mrp_confirm_wizard.xml"
     ],
 }

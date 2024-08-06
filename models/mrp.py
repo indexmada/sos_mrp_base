@@ -3,7 +3,7 @@
 from odoo import models, fields, api,_
 from odoo.exceptions import UserError, ValidationError
 import logging
-
+import json
 
 _logger = logging.getLogger(__name__)
 
@@ -29,6 +29,8 @@ class StockMove(models.Model):
 
 	categ_id = fields.Many2one(comodel_name="product.category", string="Catégorie")
 	product_taken_ids = fields.Many2many(related="raw_material_production_id.product_taken_ids", string="Produit déjà pris")
+	product_taken_vals = fields.Char(related="raw_material_production_id.product_taken_vals", string="Produit déjà pris: JSON format")
+	
 
 	@api.model
 	def create(self, vals):
@@ -38,6 +40,25 @@ class StockMove(models.Model):
 		res = super(StockMove, self).create(vals)
 		return res
 	
+	def _get_count_product_takens(self):
+		return json.loads(self.product_taken_vals or {})
+
+
+		return product_count
+	@api.depends('product_taken_vals')
+	@api.onchange('product_id')
+	def _onchange_product(self):
+		all_count = self._get_count_product_takens()
+		vals = all_count.get(str(self.product_id.id), {})
+		_logger.info('#'*50)
+		_logger.info(vals)
+		_logger.info(all_count)
+		_logger.info('#'*50)
+		if  self.raw_material_production_id and vals.get('count', 0) > 1:
+			return {
+				'warning': {'title': "Confirmation", 'message': """Votre fabrication contient déjà l’article : %s (%s %s) . Souhaitez vous en
+rajouter à nouveau ?"""  % (self.product_id.name, vals.get('qty', ''), vals.get('uom', ''))},
+			}
 
 
 class MrpProduction(models.Model):
@@ -46,6 +67,7 @@ class MrpProduction(models.Model):
 
 	normal_product_ids = fields.Many2many(string="Normal Product", comodel_name="product.product", compute="_compute_normal_product", default=lambda self: self.product_domain())
 	product_taken_ids = fields.Many2many('product.product', string="Produit déjà pris", compute="_set_product_taken_ids")
+	product_taken_vals = fields.Char(string="Produit déjà pris: JSON format", compute="_set_product_taken_ids")
 
 	def _compute_normal_product(self):
 		for rec in self:
@@ -72,20 +94,31 @@ class MrpProduction(models.Model):
 		}
 	
 	def button_mark_done(self):
-		res = super(MrpProduction, self).button_mark_done()
+
 		for rec in self:
 			picking = rec.picking_ids.filtered(lambda d: d.state != 'done')
 			if picking:
 				raise ValidationError("""Vous ne pouvez pas marquer cette fabrication comme terminée tant que le transfert associé n'est pas effectué ou terminé. 
 						  \nVeuillez d'abord terminer ou marquer comme fait le transfert""")
+		res = super(MrpProduction, self).button_mark_done()		
 		return res
 
 	
 	@api.depends('move_raw_ids.product_id')
 	def _set_product_taken_ids(self):
 		for rec in self:
+			values = {}
 			rec.product_taken_ids = rec.move_raw_ids.mapped('product_id.id')
-			
+			for line in rec.move_raw_ids:
+				
+				if "ref=" in str(line) or line._origin:
+					product_id = line.product_id.id
+					if product_id in values:
+						values[product_id]['count'] += 1
+						values[product_id]['qty'] += line.product_uom_qty
+					else:					
+						values[product_id]= {'qty': line.product_uom_qty, 'count': 1, 'uom': line.product_uom.name}
+			rec.product_taken_vals = json.dumps(values)
 
 
 

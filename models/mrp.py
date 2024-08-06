@@ -76,7 +76,6 @@ class MrpProduction(models.Model):
 	def product_domain(self):
 		bom_ids = self.env['mrp.bom'].sudo().search([('type', '=', 'normal')])
 		product_product_ids = self.env['product.product'].sudo().search([('product_tmpl_id', 'in', bom_ids.mapped('product_tmpl_id').ids)])
-		# product_ids = self.env['product.product'].sudo().search([('type', 'in', ['product', 'consu']), ('id', 'in', product_product_ids.ids)])
 		return product_product_ids.ids
 
 	def _get_move_raw_values(self, product_id, product_uom_qty, product_uom, operation_id=False, bom_line=False):
@@ -96,7 +95,7 @@ class MrpProduction(models.Model):
 	def button_mark_done(self):
 
 		for rec in self:
-			picking = rec.picking_ids.filtered(lambda d: d.state != 'done')
+			picking = rec.picking_ids.filtered(lambda d: d.state in ('done', 'cancel'))
 			if picking:
 				raise ValidationError("""Vous ne pouvez pas marquer cette fabrication comme terminée tant que le transfert associé n'est pas effectué ou terminé. 
 						  \nVeuillez d'abord terminer ou marquer comme fait le transfert""")

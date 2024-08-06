@@ -20,5 +20,5 @@
                 <filter name="by_operation" string="Opérations"  context="{'group_by': 'operation_id'}" />
             </xpath>
         </field>
-    </record>    
+    </record>
 </odoo>

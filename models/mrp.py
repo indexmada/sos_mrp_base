@@ -96,7 +96,8 @@ class MrpProduction(models.Model):
 	def button_mark_done(self):
 
 		for rec in self:
-			picking = rec.picking_ids.filtered(lambda d: d.state != 'done')
+			picking = rec.picking_ids.filtered(lambda d: d.state in ('done', 'cancel'))
+
 			if picking:
 				raise ValidationError("""Vous ne pouvez pas marquer cette fabrication comme terminée tant que le transfert associé n'est pas effectué ou terminé. 
 						  \nVeuillez d'abord terminer ou marquer comme fait le transfert""")

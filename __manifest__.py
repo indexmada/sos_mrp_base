@@ -24,6 +24,7 @@
     'depends': ['base', 'mrp'],
 
     # always loaded
+    'post_init_hook': '_copy_operations',
     'data': [
         'security/ir.model.access.csv',
         'views/views.xml',

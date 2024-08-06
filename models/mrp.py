@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from odoo import models, fields, api,_
+from odoo import models, fields, api,_,Command
 from odoo.exceptions import UserError, ValidationError
 import logging
 import json
@@ -50,10 +50,6 @@ class StockMove(models.Model):
 	def _onchange_product(self):
 		all_count = self._get_count_product_takens()
 		vals = all_count.get(str(self.product_id.id), {})
-		_logger.info('#'*50)
-		_logger.info(vals)
-		_logger.info(all_count)
-		_logger.info('#'*50)
 		if  self.raw_material_production_id and vals.get('count', 0) > 1:
 			return {
 				'warning': {'title': "Confirmation", 'message': """Votre fabrication contient déjà l’article : %s (%s %s) . Souhaitez vous en
@@ -120,6 +116,52 @@ class MrpProduction(models.Model):
 			rec.product_taken_vals = json.dumps(values)
 
 
+ 
+	@api.depends('bom_id', 'product_id', 'product_qty', 'product_uom_id')
+	def _compute_workorder_ids(self):
+		for production in self:
+			if production.state != 'draft':
+				continue
+			workorders_list = [Command.link(wo.id) for wo in production.workorder_ids.filtered(lambda wo: not wo.operation_id)]
+			workorders_list += [Command.delete(wo.id) for wo in production.workorder_ids.filtered(lambda wo: wo.operation_id and wo.operation_id.bom_id != production.bom_id)]
+			if not production.bom_id and not production._origin.product_id:
+				production.workorder_ids = workorders_list
+			if production.product_id != production._origin.product_id:
+				production.workorder_ids = [Command.clear()]
+			if production.bom_id and production.product_id and production.product_qty > 0:
+				# keep manual entries
+				workorders_values = []
+				product_qty = production.product_uom_id._compute_quantity(production.product_qty, production.bom_id.product_uom_id)
+				exploded_boms, dummy = production.bom_id.explode(production.product_id, product_qty / production.bom_id.product_qty, picking_type=production.bom_id.picking_type_id)
+
+				for bom, bom_data in exploded_boms:
+					# If the operations of the parent BoM and phantom BoM are the same, don't recreate work orders.
+					if not (bom.operations_ids and (not bom_data['parent_line'] or bom_data['parent_line'].bom_id.operations_ids != bom.operations_ids)):
+						continue
+					for operation in bom.operations_ids:
+						if operation._skip_operation_line(bom_data['product']):
+							continue
+						workorders_values += [{
+							'name': operation.name,
+							'production_id': production.id,
+							'workcenter_id': operation.workcenter_id.id,
+							'product_uom_id': production.product_uom_id.id,
+							'operation_id': operation.id,
+							'state': 'pending',
+						}]
+				workorders_dict = {wo.operation_id.id: wo for wo in production.workorder_ids.filtered(lambda wo: wo.operation_id)}
+				for workorder_values in workorders_values:
+					if workorder_values['operation_id'] in workorders_dict:
+						# update existing entries
+						workorders_list += [Command.update(workorders_dict[workorder_values['operation_id']].id, workorder_values)]
+					else:
+						# add new entries
+						workorders_list += [Command.create(workorder_values)]
+				production.workorder_ids = workorders_list
+			else:
+				production.workorder_ids = [Command.delete(wo.id) for wo in production.workorder_ids.filtered(lambda wo: wo.operation_id)]
+            
+                
 
 class StockMoveLine(models.Model):
 	_inherit = "stock.move.line"

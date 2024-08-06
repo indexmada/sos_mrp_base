@@ -25,13 +25,24 @@
         <field name="model">mrp.bom</field>
         <field name="inherit_id" ref="mrp.mrp_bom_form_view"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='product_tmpl_id']" position="after">
-                <field name="allowed_operation_ids" invisible="1"/>
-                
+            <xpath expr="//form/sheet" position="inside">
+                <field name="allowed_operations_ids" invisible="1"/>
             </xpath>
-            <xpath expr="//field[@name='operation_ids']" position="attributes">
-                <attribute name="domain">[('id', 'in', allowed_operation_ids)]</attribute>
+
+            <xpath expr="//field[@name='bom_line_ids']/tree/field[3]" position="before">
+                <field name="categ_id"/>
             </xpath>
+
+            <xpath expr="//page[@name='operations']/field[@name='operation_ids']" position="after">
+                <field name="allowed_operations_ids" invisible="1"/>
+                <field name="operations_ids" domain="[('id', 'in', allowed_operations_ids)]" attrs="{'invisible': [('type','not in',('normal','phantom'))]}" groups="mrp.group_mrp_routings" context="{'bom_id_invisible': True, 'default_bom_id': id, 'tree_view_ref': 'mrp.mrp_routing_workcenter_bom_tree_view'}"/>
+            </xpath>
+
+            <xpath expr="//page[@name='operations']/field[@name='operation_ids']" position="attributes">
+                <attribute name="invisible">0</attribute>
+            </xpath>
+
+           
         </field>
     </record>
 

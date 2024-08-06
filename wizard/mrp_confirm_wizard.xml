@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mrp_confirm_wizard_view_tree" model="ir.ui.view">
+        <field name="name">mrp.confirm_wizard.view.tree</field>
+        <field name="model">mrp.confirm_wizard</field>
+        <field name="arch" type="xml">
+            <form string="Alert de validation">
+                <sheet>
+                    <group>
+                        <div class="alert aler-success">
+                            Lorem upsu
+                        </div>
+                    </group>
+                    <footer>
+                        <!-- <button string="Apply" class="btn btn-primary" type="object" name="action_save_onboarding_sale_tax" data-hotkey="q" /> -->
+                        <button string="Cancel" class="btn-secondary" special="cancel" data-hotkey="z" />
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+</odoo>

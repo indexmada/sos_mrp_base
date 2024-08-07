@@ -41,7 +41,7 @@ class StockMove(models.Model):
 		return res
 	
 	def _get_count_product_takens(self):
-		return json.loads(self.product_taken_vals or {})
+		return json.loads(self.product_taken_vals or "{}")
 
 
 		return product_count
@@ -50,10 +50,6 @@ class StockMove(models.Model):
 	def _onchange_product(self):
 		all_count = self._get_count_product_takens()
 		vals = all_count.get(str(self.product_id.id), {})
-		_logger.info('#'*50)
-		_logger.info(vals)
-		_logger.info(all_count)
-		_logger.info('#'*50)
 		if  self.raw_material_production_id and vals.get('count', 0) > 1:
 			return {
 				'warning': {'title': "Confirmation", 'message': """Votre fabrication contient déjà l’article : %s (%s %s) . Souhaitez vous en
@@ -76,7 +72,6 @@ class MrpProduction(models.Model):
 	def product_domain(self):
 		bom_ids = self.env['mrp.bom'].sudo().search([('type', '=', 'normal')])
 		product_product_ids = self.env['product.product'].sudo().search([('product_tmpl_id', 'in', bom_ids.mapped('product_tmpl_id').ids)])
-		# product_ids = self.env['product.product'].sudo().search([('type', 'in', ['product', 'consu']), ('id', 'in', product_product_ids.ids)])
 		return product_product_ids.ids
 
 	def _get_move_raw_values(self, product_id, product_uom_qty, product_uom, operation_id=False, bom_line=False):

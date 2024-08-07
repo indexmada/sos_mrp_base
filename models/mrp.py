@@ -72,7 +72,6 @@ class MrpProduction(models.Model):
 	def product_domain(self):
 		bom_ids = self.env['mrp.bom'].sudo().search([('type', '=', 'normal')])
 		product_product_ids = self.env['product.product'].sudo().search([('product_tmpl_id', 'in', bom_ids.mapped('product_tmpl_id').ids)])
-		# product_ids = self.env['product.product'].sudo().search([('type', 'in', ['product', 'consu']), ('id', 'in', product_product_ids.ids)])
 		return product_product_ids.ids
 
 	def _get_move_raw_values(self, product_id, product_uom_qty, product_uom, operation_id=False, bom_line=False):

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="mrp_routing_workcenter_inherit_sos_mrp" model="ir.ui.view">
+        <field name="name">Mpr routing workcenter</field>
+        <field name="model">mrp.routing.workcenter</field>
+        <field name="inherit_id" ref="mrp.mrp_routing_workcenter_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Configuration" name="configuration">
+                    <field name="taken_boom_ids" invisible="1"/>
+                    <field name="allowed_bom_ids" widget="one2many">
+                        <tree editable="bottom" create='1' no_open="1">
+                            <field name="taken_boom_ids" invisible="1"/>
+                            <field name="bom_id" domain="[('id', 'not in', taken_boom_ids)]"/>
+                            <field name="workcenter_id" />
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+    <record id="mrp_bom_view__inherit_sos_mrp_base" model="ir.ui.view">
+        <field name="name">Inherit MRP BOM</field>
+        <field name="model">mrp.bom</field>
+        <field name="inherit_id" ref="mrp.mrp_bom_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_tmpl_id']" position="after">
+                <field name="allowed_operation_ids" invisible="1"/>
+                
+            </xpath>
+            <xpath expr="//field[@name='operation_ids']" position="attributes">
+                <attribute name="domain">[('id', 'in', allowed_operation_ids)]</attribute>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

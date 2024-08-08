@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import models, fields, api,_
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tools import float_compare, float_round, float_is_zero, OrderedSet
 
 from dateutil.relativedelta import relativedelta
@@ -113,7 +113,7 @@ class MrpProduction(models.Model):
 	def button_mark_done(self):
 
 		for rec in self:
-			picking = rec.picking_ids.filtered(lambda d: d.state not in ('waiting', 'confirmed', 'done', 'cancel'))
+			picking = rec.picking_ids.filtered(lambda d: d.state not in ('waiting', 'confirmed', 'done', 'cancel') and d.location_id.id == rec.location_dest_id.id)
 
 			if picking:
 				raise ValidationError("""Vous ne pouvez pas marquer cette fabrication comme terminée tant que le transfert associé n'est pas effectué ou terminé. 

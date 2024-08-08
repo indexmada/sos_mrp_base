@@ -142,11 +142,36 @@ class MrpProduction(models.Model):
 		if self.need_recompute_qty:		
 			super(MrpProduction,self)._set_qty_producing()
 
-	@api.onchange('qty_producing', 'lot_producing_id', 'need_recompute_qty')
+	@api.onchange('qty_producing', 'lot_producing_id')
 	def _onchange_producing(self):
-		self._set_qty_producing()
 
+		self._set_qty_producing()
 		self.compute_prod_qty_pickings()
+		if self.state != 'draft':
+
+			if self.need_recompute_qty:
+				message = "Votre composant a été recalculé. Veuillez décocher 'Voulez-vous mettre à jour les composants ?' si vous ne souhaitez pas lancer un nouveau recalcul."
+
+			else:
+				message = "Votre composant n'a pas été recalculé. Veuillez cocher 'Voulez-vous mettre à jour les composants ?' si vous souhaitez lancer le recalcul."
+			return {
+				'warning': {'title': "Warning", 'message': message}
+			}
+	
+	@api.onchange('need_recompute_qty')
+	def _onchange_need_recompute_qty(self):
+		self._set_qty_producing()
+		self.compute_prod_qty_pickings()
+		if self.state != 'draft':
+			if self.need_recompute_qty:
+				message = "Votre composant sera recalculé. Veuillez décocher 'Voulez-vous mettre à jour les composants ?' si vous ne souhaitez pas lancer un nouveau recalcul."
+
+			else:
+				message = "Votre composant ne sera pas recalculé. Veuillez cocher 'Voulez-vous mettre à jour les composants ?' si vous souhaitez lancer le recalcul."
+
+			return {
+				'warning': {'title': "Warning", 'message': message}
+			}
 	
 	def compute_prod_qty_pickings(self):
 		move_raw = self.move_raw_ids

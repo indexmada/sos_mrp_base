@@ -24,6 +24,15 @@
               <field name="product_taken_ids" invisible="1"/>
               <field name="product_taken_vals" invisible="1"/>
             </xpath>
+            <xpath expr="//div[@name='bom_div']" position="after">
+              <label for="need_recompute_qty" name="need_recompute_qty_label" attrs="{'readonly': ['|', ('state', '=', 'cancel'), '&amp;', ('state', '=', 'done'), ('is_locked', '=', True)], 'invisible': [('state', '=', 'draft')]}"/>
+                <div class="o_row" name="need_recompute_qty" attrs="{'readonly': ['|', ('state', '=', 'cancel'), '&amp;', ('state', '=', 'done'), ('is_locked', '=', True)], 'invisible': [('state', '=', 'draft')]}">
+                    <field name="need_recompute_qty" attrs="{'readonly': ['|', ('state', '=', 'cancel'), '&amp;', ('state', '=', 'done'), ('is_locked', '=', True)], 'invisible': [('state', '=', 'draft')]}"/>
+                </div>
+            </xpath>
+
+
+
             <xpath expr="//field[@name='move_raw_ids']/tree/field[1]" position="before">
                 <field name="categ_id" force_save="1" attrs="{'readonly': [('parent.state', 'not in', ('draft', 'confirmed'))]}"/>
                 <field name="product_taken_ids" readonly="1" invisible="1"/>

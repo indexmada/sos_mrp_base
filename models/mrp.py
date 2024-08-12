@@ -2,6 +2,10 @@
 
 from odoo import models, fields, api,_
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import float_compare, float_round, float_is_zero, OrderedSet
+
+from dateutil.relativedelta import relativedelta
+
 import logging
 import json
 
@@ -56,6 +60,22 @@ class StockMove(models.Model):
 rajouter à nouveau ?"""  % (self.product_id.name, vals.get('qty', ''), vals.get('uom', ''))},
 			}
 
+	@api.depends('raw_material_production_id.qty_producing', 'product_uom_qty', 'product_uom', 'raw_material_production_id.need_recompute_qty')
+	def _compute_should_consume_qty(self):
+		for move in self:
+			mo = move.raw_material_production_id
+			if not mo or not move.product_uom:
+				move.should_consume_qty = 0
+				continue
+			qty_producing = mo.product_uom_qty
+			if mo.need_recompute_qty:
+				_logger.info('need' *50)
+				_logger.info(mo.qty_producing)
+				_logger.info(mo.qty_produced)
+				_logger.info('need' *50)
+				qty_producing = mo.qty_producing
+			
+			move.should_consume_qty = float_round(( qty_producing- mo.qty_produced) * move.unit_factor, precision_rounding=move.product_uom.rounding)
 
 class MrpProduction(models.Model):
 
@@ -64,6 +84,8 @@ class MrpProduction(models.Model):
 	normal_product_ids = fields.Many2many(string="Normal Product", comodel_name="product.product", compute="_compute_normal_product", default=lambda self: self.product_domain())
 	product_taken_ids = fields.Many2many('product.product', string="Produit déjà pris", compute="_set_product_taken_ids")
 	product_taken_vals = fields.Char(string="Produit déjà pris: JSON format", compute="_set_product_taken_ids")
+	need_recompute_qty = fields.Boolean(string="Voulez-vous mettre à jours les composants ?", default=False)
+	date_end = fields.Datetime(string="Date de fin", default=False)
 
 	def _compute_normal_product(self):
 		for rec in self:
@@ -82,6 +104,7 @@ class MrpProduction(models.Model):
 		return data
 	
 	def action_open_confirm(self):
+		self._compute_product_qty()
 		return {
 			'type': 'ir.actions.client',
 			'tag': 'display_notification',
@@ -91,7 +114,7 @@ class MrpProduction(models.Model):
 	def button_mark_done(self):
 
 		for rec in self:
-			picking = rec.picking_ids.filtered(lambda d: d.state in ('done', 'cancel'))
+			picking = rec.picking_ids.filtered(lambda d: d.state not in ('waiting', 'confirmed', 'done', 'cancel') and d.location_id.id == rec.location_dest_id.id)
 
 			if picking:
 				raise ValidationError("""Vous ne pouvez pas marquer cette fabrication comme terminée tant que le transfert associé n'est pas effectué ou terminé. 
@@ -116,7 +139,54 @@ class MrpProduction(models.Model):
 						values[product_id]= {'qty': line.product_uom_qty, 'count': 1, 'uom': line.product_uom.name}
 			rec.product_taken_vals = json.dumps(values)
 
+	def _set_qty_producing(self):
+		if self.need_recompute_qty:		
+			super(MrpProduction,self)._set_qty_producing()
 
+	@api.onchange('qty_producing', 'lot_producing_id')
+	def _onchange_producing(self):
+
+		self._set_qty_producing()
+		self.compute_prod_qty_pickings()
+		if self.state != 'draft':
+
+			if self.need_recompute_qty:
+				message = "Votre composant a été recalculé. Veuillez décocher 'Voulez-vous mettre à jour les composants ?' si vous ne souhaitez pas lancer un nouveau recalcul."
+
+			else:
+				message = "Votre composant n'a pas été recalculé. Veuillez cocher 'Voulez-vous mettre à jour les composants ?' si vous souhaitez lancer le recalcul."
+			return {
+				'warning': {'title': "Warning", 'message': message}
+			}
+	
+	@api.onchange('need_recompute_qty')
+	def _onchange_need_recompute_qty(self):
+		self._set_qty_producing()
+		self.compute_prod_qty_pickings()
+		if self.state != 'draft':
+			if self.need_recompute_qty:
+				message = "Votre composant sera recalculé. Veuillez décocher 'Voulez-vous mettre à jour les composants ?' si vous ne souhaitez pas lancer un nouveau recalcul."
+
+			else:
+				message = "Votre composant ne sera pas recalculé. Veuillez cocher 'Voulez-vous mettre à jour les composants ?' si vous souhaitez lancer le recalcul."
+
+			return {
+				'warning': {'title': "Warning", 'message': message}
+			}
+	
+	def compute_prod_qty_pickings(self):
+		move_raw = self.move_raw_ids
+		for picking in self.picking_ids:
+			move_ids = picking.move_ids_without_package
+			if len(move_ids) == 1 and move_ids.location_id.id == self.location_dest_id.id:
+				move_ids._origin.write({'product_uom_qty': self.qty_producing})
+			else:
+				i = 0
+				for move in move_ids:
+					rec =  move_raw[i]
+					if move.product_id.id == rec.product_id.id:
+						move._origin.write({'product_uom_qty': rec.should_consume_qty})
+					i+=1
 
 class StockMoveLine(models.Model):
 	_inherit = "stock.move.line"
@@ -125,5 +195,3 @@ class StockMoveLine(models.Model):
 
 
 
-
-	

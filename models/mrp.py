@@ -85,6 +85,7 @@ class MrpProduction(models.Model):
 	product_taken_ids = fields.Many2many('product.product', string="Produit déjà pris", compute="_set_product_taken_ids")
 	product_taken_vals = fields.Char(string="Produit déjà pris: JSON format", compute="_set_product_taken_ids")
 	need_recompute_qty = fields.Boolean(string="Voulez-vous mettre à jours les composants ?", default=False)
+	date_end = fields.Datetime(string="Date de fin", default=False)
 
 	def _compute_normal_product(self):
 		for rec in self:
@@ -177,9 +178,9 @@ class MrpProduction(models.Model):
 		move_raw = self.move_raw_ids
 		for picking in self.picking_ids:
 			move_ids = picking.move_ids_without_package
-			if len(move_ids) == 1:
+			if len(move_ids) == 1 and move_ids.location_id.id == self.location_dest_id.id:
 				move_ids._origin.write({'product_uom_qty': self.qty_producing})
-			elif len(move_ids)>1:
+			else:
 				i = 0
 				for move in move_ids:
 					rec =  move_raw[i]

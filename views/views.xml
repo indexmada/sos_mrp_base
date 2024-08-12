@@ -20,6 +20,9 @@
         <field name="model">mrp.production</field>
         <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='components_availability_state']" position="before">
+              <field name="date_end" />
+            </xpath>
             <xpath expr="//sheet" position="inside">
               <field name="product_taken_ids" invisible="1"/>
               <field name="product_taken_vals" invisible="1"/>
